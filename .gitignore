@@ -1,2 +1,5 @@
 *input
+.env
 *elijah
+__pycache__
+*cache
