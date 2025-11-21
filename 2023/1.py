@@ -1,16 +1,17 @@
 import csv
 import re
+from aoc import puzzle
 
-sum = 0
-with open("1 input", "r") as file:
-    for line in file:
-        values = []
-        for i in line:
-            if i.isdigit():
-                values.append(int(i))
-        sum += 10 * values[0] + values[-1]
+total_sum = 0
+data = puzzle.char_grid()
+for line in data:
+    values = []
+    for i in line:
+        if i.isdigit():
+            values.append(int(i))
+    total_sum += 10 * values[0] + values[-1]
 
-print(f"Part One: {sum}")
+puzzle.submit_one(total_sum)
 
 def num2num(num):
     word_to_num = {
@@ -29,10 +30,10 @@ def num2num(num):
     else:
         return word_to_num[num]
 pattern = re.compile(r"(?=([0-9]|one|two|three|four|five|six|seven|eight|nine))", re.IGNORECASE)
-sum = 0
-with open("1 input", "r") as file:
-    for line in file:
-        values = [num2num(i) for i in pattern.findall(line)]
-        sum += 10 * values[0] + values[-1]
+total_sum = 0
+data = puzzle.lines()
+for line in data:
+    values = [num2num(i) for i in pattern.findall(line)]
+    total_sum += 10 * values[0] + values[-1]
 
-print(f"Part Two: {sum}")
+puzzle.submit_two(total_sum)

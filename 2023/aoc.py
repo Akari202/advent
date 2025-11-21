@@ -1,10 +1,11 @@
+import re
 import sys
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Optional, cast
 import requests
-from logging import debug, error, info
+from logging import debug, error, info, warning
 import logging
 from colorlog import ColoredFormatter
 import colorlog
@@ -16,7 +17,8 @@ load_dotenv()
 
 DEV_MODE = os.getenv("DEV_MODE") == "True"
 SESSION = os.getenv("SESSION")
-print(DEV_MODE)
+if DEV_MODE:
+    info("Running in development mode")
 handler = colorlog.StreamHandler()
 formatter = ColoredFormatter(
     "%(log_color)s[%(levelname)s]%(reset)s %(message)s",
@@ -51,6 +53,10 @@ class ErrorSubmitting(Exception):
     pass
 
 
+class ErrorFetchingAnswers(Exception):
+    pass
+
+
 class UnknownResponse(Exception):
     pass
 
@@ -68,22 +74,24 @@ class Result(Enum):
     CORRECT = 0
     HIGH = 1
     LOW = 2
+    COMPLETED = 3
 
     def to_function(self) -> Callable[[int, int], int]:
         if self == Result.HIGH:
             return min
         if self == Result.LOW:
             return max
-        else:
+        if self == Result.COMPLETED:
+            raise UnreachableError
 
-            def dummy(arg1: int, arg2: int) -> int:
-                error("Something really goofy happened")
-                return arg1
+        def dummy(arg1: int, _arg2: int) -> int:
+            error("Something really goofy happened. Continuing")
+            return arg1
 
-            return dummy
+        return dummy
 
 
-def __cmp_correct(correct: int, guess: int) -> Result:
+def cmp_correct(correct: int, guess: int) -> Result:
     if correct == guess:
         return Result.CORRECT
     elif correct > guess:
@@ -101,8 +109,10 @@ class Aoc:
         self.cache_file = self.path.parent / "data" / f"{self.day} cache"
         self.test_file = self.path.parent / "data" / f"{self.day} test"
         self.__input_data = ""
-        self.test_answer = 0
+        self.__test_answer = 0
         info(f"Using {self.year} day {self.day}")
+        data_dir = self.path.parent / "data"
+        data_dir.mkdir(exist_ok=True)
 
     def __str__(self) -> str:
         return f"{self.year} day {self.day}"
@@ -116,6 +126,15 @@ class Aoc:
                 self.__input_data = self.__get_input()
                 self.__cache_input()
         return self.__input_data
+
+    @property
+    def test_answer(self) -> int:
+        return self.__test_answer
+
+    @test_answer.setter
+    def test_answer(self, value: int):
+        self.__input_data = ""
+        self.__test_answer = value
 
     def is_input_cached(self) -> bool:
         if self.test_answer == 0:
@@ -164,6 +183,21 @@ class Aoc:
                 debug(response.__dict__)
                 raise ErrorSubmitting
             result = Aoc.__parse_submission_response(response)
+            if result == Result.COMPLETED:
+                correct_answers = self.__fetch_completed_answers()
+                if correct_answers[part.value - 1] is None:
+                    error(
+                        "Something has gone quite wrong. "
+                        + "Server seems to think this puzzle is completed but I am unable to parse the answers"
+                    )
+                    raise ErrorSubmitting
+                result = cmp_correct(cast(int, correct_answers[part.value - 1]), answer)
+                if part == Part.ONE and correct_answers[1] is not None:
+                    self.__save_submission(Part.TWO, correct_answers[1], Result.CORRECT)
+            if result == Result.CORRECT:
+                self.__print_correct(part, answer)
+            else:
+                self.__print_wrong(part, answer, result)
             self.__save_submission(part, answer, result)
 
     @staticmethod
@@ -175,10 +209,38 @@ class Aoc:
             return Result.LOW
         elif "That's not the right answer; your answer is too high." in content:
             return Result.HIGH
+        elif "You don't seem to be solving the right level." in content:
+            error("Level already completed")
+            return Result.COMPLETED
         else:
             error("Unknown response")
             debug(response.__dict__)
             raise UnknownResponse
+
+    def __fetch_completed_answers(self) -> tuple[Optional[int], Optional[int]]:
+        if not self.__check_puzzle_released():
+            raise ErrorFetchingInput
+        if not self.__dev_server_check():
+            raise ErrorFetchingInput
+        info("Fetching completed answers from server")
+        response = requests.get(
+            f"https://adventofcode.com/{self.year}/day/{self.day}",
+            cookies={"session": SESSION},
+        )
+        if response.status_code != 200:
+            error("Error fetching answers")
+            raise ErrorFetchingAnswers
+        content = response.content.decode("utf-8")
+        matches = re.findall(r"Your puzzle answer was \D*(\d*)", content)
+        if len(matches) == 0:
+            return (None, None)
+        if len(matches) == 1:
+            return (int(matches[0]), None)
+        if len(matches) == 2:
+            return (int(matches[0]), int(matches[1]))
+        error("Too many answers?????")
+        error(content)
+        raise UnreachableError
 
     def __check_puzzle_released(self) -> bool:
         now = datetime.now()
@@ -195,14 +257,14 @@ class Aoc:
 
         if self.test_answer != 0:
             info("Evaluating test case")
-            result = __cmp_correct(self.test_answer, answer)
+            result = cmp_correct(self.test_answer, answer)
             if result == Result.CORRECT:
                 info(
-                    f"{answer} is the correct test answer for {self.year} day {self.day} part {part}"
+                    f"{answer} is the correct test answer for {self.year} day {self.day} part {part.name}"
                 )
             else:
-                info(
-                    f"{answer} is not the correct test answer for {self.year} day {self.day} part {part}. It is too {result.name}, the correct answer is {self.test_answer}"
+                warning(
+                    f"{answer} is not the correct test answer for {self.year} day {self.day} part {part.name}. It is too {result.name}, the correct answer is {self.test_answer}"
                 )
             return False
 
@@ -211,15 +273,6 @@ class Aoc:
             with open(self.cache_file, "r") as file:
                 cache = json.load(file)
 
-            last_submit = datetime.fromisoformat(cache["last_submit_time"].strip())
-            delta = now - last_submit
-            timeout = timedelta(minutes=5)
-            if delta < timeout:
-                info("Too soon to submit a new answer")
-                remaining = timeout - delta
-                info(f"Please wait {remaining} longer")
-                return False
-
         if part.name in cache.keys():
             if Result.CORRECT.name in cache[part.name].keys():
                 correct = cache[part.name][Result.CORRECT.name]
@@ -227,7 +280,7 @@ class Aoc:
                     self.__print_correct(part, answer)
                 else:
                     info("The correct answer, {correct}, has already been submitted")
-                    self.__print_wrong(part, answer, __cmp_correct(correct, answer))
+                    self.__print_wrong(part, answer, cmp_correct(correct, answer))
                 return False
             if Result.LOW.name in cache[part.name].keys():
                 low = cache[part.name][Result.LOW.name]
@@ -254,6 +307,17 @@ class Aoc:
                     )
                     return False
 
+        if "last_submit_time" in cache.keys():
+            now = datetime.now()
+            last_submit = datetime.fromisoformat(cache["last_submit_time"].strip())
+            delta = now - last_submit
+            timeout = timedelta(minutes=5)
+            if delta < timeout:
+                info("Too soon to submit a new answer")
+                remaining = timeout - delta
+                info(f"Please wait {remaining} longer")
+                return False
+
         return True
 
     def __save_submission(self, part: Part, answer: int, result: Result):
@@ -279,12 +343,12 @@ class Aoc:
 
     def __print_correct(self, part: Part, answer: int):
         info(
-            f"{answer} is the correct answer for {self.year} day {self.day} part {part}"
+            f"{answer} is the correct answer for {self.year} day {self.day} part {part.name}"
         )
 
     def __print_wrong(self, part: Part, answer: int, result: Result):
-        info(
-            f"{answer} is not the correct answer for {self.year} day {self.day} part {part}. It is too {result.name}"
+        warning(
+            f"{answer} is not the correct answer for {self.year} day {self.day} part {part.name}. It is too {result.name}"
         )
 
     def __cache_input(self):
