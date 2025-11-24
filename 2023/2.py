@@ -19,6 +19,7 @@ game_re = re.compile(r"^Game (\d*): (.*)")
 total_sum = 0
 for i in data:
     match = game_re.search(i)
+    assert match is not None
     rounds = match.group(2).split(";")
     good = True
     for j in rounds:
@@ -34,7 +35,7 @@ for i in data:
 
 puzzle.submit_one(total_sum)
 
-puzzle.test_answer = 2286
+# puzzle.test_answer = 2286
 
 data = puzzle.lines()
 game_re = re.compile(r"^Game (\d*): (.*)")
@@ -42,15 +43,16 @@ total_sum = 0
 for i in data:
     rgb_max = [0, 0, 0]
     match = game_re.search(i)
+    assert match is not None
     rounds = match.group(2).split(";")
     for j in rounds:
         shown = j.split(",")
         for k in shown:
             split = k.strip().split(" ")
-            rgb_max[Color[split[1]].value] = max(int(split[0]), rgb_max[Color[split[1]].value])
+            rgb_max[Color[split[1]].value] = max(
+                int(split[0]), rgb_max[Color[split[1]].value]
+            )
     power = math.prod(rgb_max)
     total_sum += power
 
 puzzle.submit_two(total_sum)
-
-

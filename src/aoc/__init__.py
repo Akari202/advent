@@ -3,7 +3,7 @@ import sys
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Optional, cast
+from typing import Any, Callable, Optional, cast
 import requests
 from logging import debug, error, info, warning
 import logging
@@ -12,11 +12,18 @@ import colorlog
 from enum import Enum
 from dotenv import load_dotenv
 import os
+from .errors import ErrorFetchingAnswers, ErrorFetchingInput, ErrorSubmitting, SessionError, UnknownResponse, UnreachableError
+from requests.models import Response
 
-load_dotenv()
+try_load_env = load_dotenv()
+if not try_load_env:
+    _ = load_dotenv(Path(sys.argv[0]).resolve().parent.parent / ".env")
 
 DEV_MODE = os.getenv("DEV_MODE") == "True"
+# DEV_MODE = True
 SESSION = os.getenv("SESSION")
+if SESSION is None:
+    raise SessionError
 if DEV_MODE:
     info("Running in development mode")
 handler = colorlog.StreamHandler()
@@ -43,26 +50,10 @@ else:
 handler.setFormatter(formatter)
 logger.handlers = []
 logger.addHandler(handler)
+__puzzle_attr = None
 
 
-class ErrorFetchingInput(Exception):
-    pass
 
-
-class ErrorSubmitting(Exception):
-    pass
-
-
-class ErrorFetchingAnswers(Exception):
-    pass
-
-
-class UnknownResponse(Exception):
-    pass
-
-
-class UnreachableError(Exception):
-    pass
 
 
 class Part(Enum):
@@ -102,15 +93,16 @@ def cmp_correct(correct: int, guess: int) -> Result:
 
 class Aoc:
     def __init__(self):
-        self.path = Path(sys.argv[0]).resolve()
-        self.year = int(self.path.parent.name)
-        self.day = int(self.path.stem)
-        self.input_file = self.path.parent / "data" / f"{self.day} input"
-        self.cache_file = self.path.parent / "data" / f"{self.day} cache"
-        self.test_file = self.path.parent / "data" / f"{self.day} test"
+        self.path: Path = Path(sys.argv[0]).resolve()
+        self.year: int = int(self.path.parent.name)
+        self.day: int = int(self.path.stem)
+        self.input_file: Path = self.path.parent / "data" / f"{self.day} input"
+        self.cache_file: Path = self.path.parent / "data" / f"{self.day} cache"
+        self.test_file: Path = self.path.parent / "data" / f"{self.day} test"
         self.__input_data = ""
         self.__test_answer = 0
         info(f"Using {self.year} day {self.day}")
+        debug(f"Using session id: {SESSION}")
         data_dir = self.path.parent / "data"
         data_dir.mkdir(exist_ok=True)
 
@@ -201,13 +193,13 @@ class Aoc:
             self.__save_submission(part, answer, result)
 
     @staticmethod
-    def __parse_submission_response(response) -> Result:
-        content = response.content.decode("utf-8")
+    def __parse_submission_response(response: Response) -> Result:
+        content = str(response.content.decode("utf-8"))
         if "That's the right answer" in content:
             return Result.CORRECT
-        elif "That's not the right answer; your answer is too low." in content:
+        elif "That's not the right answer; your answer is too LOW" in content:
             return Result.LOW
-        elif "That's not the right answer; your answer is too high." in content:
+        elif "That's not the right answer; your answer is too HIGH" in content:
             return Result.HIGH
         elif "You don't seem to be solving the right level." in content:
             error("Level already completed")
@@ -251,6 +243,16 @@ class Aoc:
             return False
         return True
 
+
+    def __load_cache(self) -> dict[str, Any]:
+        cache: dict[str, Any] = {}
+        if self.cache_file.exists():
+            with open(self.cache_file, "r") as file:
+                cache = json.load(file)
+        return cache
+
+
+
     def __check_submission(self, part: Part, answer: int) -> bool:
         if not self.__check_puzzle_released():
             return False
@@ -268,10 +270,7 @@ class Aoc:
                 )
             return False
 
-        cache = {}
-        if self.cache_file.exists():
-            with open(self.cache_file, "r") as file:
-                cache = json.load(file)
+        cache = self.__load_cache()
 
         if part.name in cache.keys():
             if Result.CORRECT.name in cache[part.name].keys():
@@ -321,10 +320,7 @@ class Aoc:
         return True
 
     def __save_submission(self, part: Part, answer: int, result: Result):
-        cache = {}
-        if self.cache_file.exists():
-            with open(self.cache_file, "r") as file:
-                cache = json.load(file)
+        cache = self.__load_cache()
         now = datetime.now()
         cache["last_submit_time"] = now.isoformat()
         if part.name in cache.keys():
@@ -389,13 +385,13 @@ class Aoc:
         return f"https://adventofcode.com/{self.year}/day/{self.day}/answer"
 
 
-__all__ = ["puzzle"]
-
-if TYPE_CHECKING:
-    puzzle: Aoc
+# __all__ = ["puzzle"]
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> Aoc:
     if name == "puzzle":
-        return Aoc()
+        global __puzzle_attr
+        if __puzzle_attr is None:
+            __puzzle_attr = Aoc()
+        return __puzzle_attr
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
