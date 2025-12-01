@@ -1,19 +1,28 @@
+import json
+import logging
+import os
 import re
 import sys
-import json
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Any, Callable, Optional, cast
-import requests
-from logging import debug, error, info, warning
-import logging
-from colorlog import ColoredFormatter
-import colorlog
 from enum import Enum
+from logging import debug, error, info, warning
+from pathlib import Path
+from typing import Any, Callable, cast, Optional
+
+import colorlog
+import requests
+from colorlog import ColoredFormatter
 from dotenv import load_dotenv
-import os
-from .errors import ErrorFetchingAnswers, ErrorFetchingInput, ErrorSubmitting, SessionError, UnknownResponse, UnreachableError
 from requests.models import Response
+
+from .errors import (
+    ErrorFetchingAnswers,
+    ErrorFetchingInput,
+    ErrorSubmitting,
+    SessionError,
+    UnknownResponse,
+    UnreachableError,
+)
 
 try_load_env = load_dotenv()
 if not try_load_env:
@@ -51,9 +60,6 @@ handler.setFormatter(formatter)
 logger.handlers = []
 logger.addHandler(handler)
 __puzzle_attr = None
-
-
-
 
 
 class Part(Enum):
@@ -243,15 +249,12 @@ class Aoc:
             return False
         return True
 
-
     def __load_cache(self) -> dict[str, Any]:
         cache: dict[str, Any] = {}
         if self.cache_file.exists():
             with open(self.cache_file, "r") as file:
                 cache = json.load(file)
         return cache
-
-
 
     def __check_submission(self, part: Part, answer: int) -> bool:
         if not self.__check_puzzle_released():
