@@ -1,7 +1,9 @@
-from aoc import puzzle
 import re
 
-# puzzle.test_answer = 13
+from aoc import puzzle
+
+# puzzle.test_answer_one = 13
+# puzzle.test_answer_two = 30
 
 data = puzzle.lines()
 
@@ -22,8 +24,6 @@ for i in data:
 
 puzzle.submit_one(total)
 
-# puzzle.test_answer = 30
-# data = puzzle.lines()
 
 card_re = re.compile(r"Card .*: (.*) \| (.*)$")
 counts: list[int] = []

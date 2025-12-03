@@ -1,16 +1,18 @@
-from enum import Enum
 import math
 import re
+from enum import Enum
 from typing import Optional
-from numpy._typing import NDArray
-from utils import expand
+
+import numpy as np
+from aoc import puzzle
 from numpy._core.numeric import dtype
+from numpy._typing import NDArray
 from numpy.matlib import char
 from numpy.strings import isdigit
-from aoc import puzzle
-import numpy as np
+from utils import expand
 
-# puzzle.test_answer = 4361
+# puzzle.test_answer_one = 4361
+# puzzle.test_answer_two = 467835
 
 data = np.array(puzzle.char_grid())
 # print(data)
@@ -41,10 +43,6 @@ for i, j in np.ndenumerate(data):
             total += checked[1]
 
 puzzle.submit_one(total)
-
-# puzzle.test_answer = 467835
-# data = np.array(puzzle.char_grid())
-# print(data)
 
 
 def expand_number_right(index: tuple[int, int], data: NDArray[Any]) -> list[int]:

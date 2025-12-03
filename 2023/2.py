@@ -1,9 +1,11 @@
-from enum import Enum
 import math
 import re
+from enum import Enum
+
 from aoc import puzzle
 
-# puzzle.test_answer = 8
+# puzzle.test_answer_one = 8
+# puzzle.test_answer_two = 2286
 
 rgb_max = (12, 13, 14)
 
@@ -35,9 +37,7 @@ for i in data:
 
 puzzle.submit_one(total_sum)
 
-# puzzle.test_answer = 2286
 
-data = puzzle.lines()
 game_re = re.compile(r"^Game (\d*): (.*)")
 total_sum = 0
 for i in data:

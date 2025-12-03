@@ -1,6 +1,9 @@
+from logging import debug
+
 from aoc import puzzle
 
-# puzzle.test_answer = 1227775554
+# puzzle.test_answer_one = 1227775554
+# puzzle.test_answer_two = 4174379265
 data = puzzle.csv_lines()[0]
 
 count = 0
@@ -12,14 +15,12 @@ for i in data:
         if j_len % 2 != 0:
             continue
         mid = j_len // 2
-        # print(f"{j = } | {j_len = } | {mid = } | {j_str[:mid] = } | {j_str[mid:] = }")
+        debug(f"{j = } | {j_len = } | {mid = } | {j_str[:mid] = } | {j_str[mid:] = }")
         if j_str[:mid] == j_str[mid:]:
             count += j
 
 puzzle.submit_one(count)
 
-# puzzle.test_answer = 4174379265
-# data = puzzle.csv_lines()[0]
 
 count = 0
 for i in data:
@@ -40,7 +41,7 @@ for i in data:
                 comp += sub
             if comp == j_str:
                 count += j
-                # print(f"{j = } | {j_len = } | {k = } | {sub = } | {comp = }")
+                debug(f"{j = } | {j_len = } | {k = } | {sub = } | {comp = }")
                 break
 
 puzzle.submit_two(count)

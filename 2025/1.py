@@ -2,7 +2,8 @@ from logging import debug
 
 from aoc import puzzle
 
-# puzzle.test_answer = 3
+# puzzle.test_answer_one = 3
+# puzzle.test_answer_two = 6
 data = puzzle.lines()
 
 dial_position = 50
@@ -20,9 +21,6 @@ for i in data:
         count += 1
 
 puzzle.submit_one(count)
-
-# puzzle.test_answer = 6
-# data = puzzle.lines()
 
 dial_position = 50
 count = 0

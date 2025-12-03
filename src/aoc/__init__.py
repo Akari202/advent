@@ -106,7 +106,8 @@ class Aoc:
         self.cache_file: Path = self.path.parent / "data" / f"{self.day} cache"
         self.test_file: Path = self.path.parent / "data" / f"{self.day} test"
         self.__input_data = ""
-        self.__test_answer = 0
+        self.__is_test = False
+        self.__test_answers: list[int] = [0, 0]
         info(f"Using {self.year} day {self.day}")
         debug(f"Using session id: {SESSION}")
         data_dir = self.path.parent / "data"
@@ -126,19 +127,40 @@ class Aoc:
         return self.__input_data
 
     @property
-    def test_answer(self) -> int:
-        return self.__test_answer
+    def test_answer_one(self) -> int:
+        return self.__test_answers[0]
 
-    @test_answer.setter
-    def test_answer(self, value: int):
+    @test_answer_one.setter
+    def test_answer_one(self, value: int):
         self.__input_data = ""
-        self.__test_answer = value
+        self.__is_test = True
+        self.__test_answers[0] = value
+
+    @property
+    def test_answer_two(self) -> int:
+        return self.__test_answers[1]
+
+    @test_answer_two.setter
+    def test_answer_two(self, value: int):
+        self.__input_data = ""
+        self.__is_test = True
+        self.__test_answers[1] = value
+
+    def is_test(self) -> bool:
+        return self.__is_test
+
+    def test_answer(self, part: Part) -> int:
+        match part:
+            case Part.ONE:
+                return self.__test_answers[0]
+            case Part.TWO:
+                return self.__test_answers[1]
 
     def is_input_cached(self) -> bool:
-        if self.test_answer == 0:
-            return self.input_file.is_file()
-        else:
+        if self.is_test():
             return self.test_file.is_file()
+        else:
+            return self.input_file.is_file()
 
     def lines(self) -> list[str]:
         return [i.strip() for i in self.input.splitlines()]
@@ -260,16 +282,17 @@ class Aoc:
         if not self.__check_puzzle_released():
             return False
 
-        if self.test_answer != 0:
+        if self.is_test():
             info("Evaluating test case")
-            result = cmp_correct(self.test_answer, answer)
+            correct = self.test_answer(part)
+            result = cmp_correct(correct, answer)
             if result == Result.CORRECT:
                 info(
                     f"{answer} is the correct test answer for {self.year} day {self.day} part {part.name}"
                 )
             else:
                 warning(
-                    f"{answer} is not the correct test answer for {self.year} day {self.day} part {part.name}. It is too {result.name}, the correct answer is {self.test_answer}"
+                    f"{answer} is not the correct test answer for {self.year} day {self.day} part {part.name}. It is too {result.name}, the correct answer is {correct}"
                 )
             return False
 
@@ -351,7 +374,7 @@ class Aoc:
         )
 
     def __cache_input(self):
-        if self.test_answer != 0:
+        if self.is_test():
             error("Test cases were attempted to be cached. This should never happen")
             raise UnreachableError
         with open(self.input_file, "w") as file:
@@ -360,7 +383,7 @@ class Aoc:
     def __get_input(self) -> str:
         if not self.__check_puzzle_released():
             raise ErrorFetchingInput
-        if self.test_answer != 0:
+        if self.is_test():
             error("Cannot automatically fetch test cases")
             raise ErrorFetchingInput
         if not self.__dev_server_check():
@@ -374,11 +397,11 @@ class Aoc:
 
     def __read_input(self) -> str:
         info("Reading cached input")
-        if self.test_answer == 0:
-            with open(self.input_file, "r") as file:
+        if self.is_test():
+            with open(self.test_file, "r") as file:
                 return file.read()
         else:
-            with open(self.test_file, "r") as file:
+            with open(self.input_file, "r") as file:
                 return file.read()
 
     def __input_url(self) -> str:
