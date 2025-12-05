@@ -51,10 +51,13 @@ formatter = ColoredFormatter(
     style="%",
 )
 logger = logging.getLogger()
-if DEV_MODE:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.INFO)
+# if DEV_MODE:
+#     logger.setLevel(logging.DEBUG)
+# else:
+#     logger.setLevel(logging.INFO)
+#     sys.tracebacklimit = 0
+logger.setLevel(logging.DEBUG)
+if not DEV_MODE:
     sys.tracebacklimit = 0
 handler.setFormatter(formatter)
 logger.handlers = []
@@ -225,9 +228,9 @@ class Aoc:
         content = str(response.content.decode("utf-8"))
         if "That's the right answer" in content:
             return Result.CORRECT
-        elif "That's not the right answer; your answer is too LOW" in content:
+        elif "That's not the right answer; your answer is too low" in content:
             return Result.LOW
-        elif "That's not the right answer; your answer is too HIGH" in content:
+        elif "That's not the right answer; your answer is too high" in content:
             return Result.HIGH
         elif "You don't seem to be solving the right level." in content:
             error("Level already completed")
