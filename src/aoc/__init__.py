@@ -63,6 +63,9 @@ handler.setFormatter(formatter)
 logger.handlers = []
 logger.addHandler(handler)
 __puzzle_attr = None
+headers = {
+    "User-Agent": "python-requests, Akari202 aoc library <akaritwo0two@gmail.com>"
+}
 
 
 class Part(Enum):
@@ -171,6 +174,9 @@ class Aoc:
     def csv_lines(self) -> list[list[str]]:
         return [[j.strip() for j in i.split(",")] for i in self.input.splitlines()]
 
+    def csv_values(self) -> list[list[int]]:
+        return [[int(j.strip()) for j in i.split(",")] for i in self.input.splitlines()]
+
     def char_grid(self) -> list[list[str]]:
         return [list(i.strip()) for i in self.input.splitlines()]
 
@@ -199,6 +205,7 @@ class Aoc:
             response = requests.post(
                 self.__submit_url(),
                 cookies={"session": SESSION},
+                headers=headers,
                 data={"level": part.value, "answer": answer},
             )
             if response.status_code != 200:
@@ -249,6 +256,7 @@ class Aoc:
         response = requests.get(
             f"https://adventofcode.com/{self.year}/day/{self.day}",
             cookies={"session": SESSION},
+            headers=headers,
         )
         if response.status_code != 200:
             error("Error fetching answers")
@@ -392,7 +400,9 @@ class Aoc:
         if not self.__dev_server_check():
             raise ErrorFetchingInput
         info("Fetching input from server")
-        response = requests.get(self.__input_url(), cookies={"session": SESSION})
+        response = requests.get(
+            self.__input_url(), headers=headers, cookies={"session": SESSION}
+        )
         if response.status_code != 200:
             error("Error fetching input")
             raise ErrorFetchingInput
