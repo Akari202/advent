@@ -195,7 +195,7 @@ class Aoc:
         if self.__check_submission(part, answer):
             if not self.__dev_server_check():
                 return
-            info("Submitting to server")
+            info(f"Submitting {answer} to server for part {part}")
             response = requests.post(
                 self.__submit_url(),
                 cookies={"session": SESSION},

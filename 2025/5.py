@@ -5,7 +5,6 @@ from operator import itemgetter
 import numpy as np
 from aoc import puzzle
 from more_itertools import peekable
-from utils import expand
 
 # puzzle.test_answer_one = 3
 # puzzle.test_answer_two = 14
@@ -65,45 +64,58 @@ puzzle.submit_one(count)
 #     # debug(f"{i[1]} - {i[0]} = {i[1] - i[0] + 1}")
 #     count += i[1] - i[0] + 1
 
+# fresh_ranges_boolean: list[list[int]] = []
+# for i in fresh_ranges:
+#     assert i[0] <= i[1]
+#     fresh_ranges_boolean.sort(key=itemgetter(0))
+#     iterator = peekable(fresh_ranges_boolean)
+#     index = -1
+#     while True:
+#         try:
+#             j = next(iterator)
+#         except StopIteration:
+#             fresh_ranges_boolean.append(i)
+#             break
+#         else:
+#             index += 1
+#             if j[0] <= i[0] and i[1] <= j[1]:
+#                 break
+#             elif i[0] <= j[0] and j[1] <= i[1]:
+#                 fresh_ranges_boolean[index] = i
+#                 break
+#             elif i[0] > j[1] and i[1] < iterator.peek(i)[0]:
+#                 fresh_ranges_boolean.append(i)
+#                 break
+#             elif i[0] <= j[1] and i[1] < iterator.peek(i)[0]:
+#                 fresh_ranges_boolean[index][1] = i[1]
+#                 break
+#             elif (
+#                 i[0] <= j[1]
+#                 and iterator.peek(None) is not None
+#                 and i[1] >= iterator.peek()[0]
+#             ):
+#                 peeked = fresh_ranges_boolean.pop(index + 1)
+#                 fresh_ranges_boolean[index][1] = peeked[1]
+#                 break
+
 fresh_ranges_boolean: list[list[int]] = []
+fresh_ranges.sort(key=itemgetter(0))
 for i in fresh_ranges:
+    if len(fresh_ranges_boolean) == 0:
+        fresh_ranges_boolean.append(i)
+        continue
+    last = fresh_ranges_boolean[-1]
+    assert i[0] >= last[0]
     assert i[0] <= i[1]
-    fresh_ranges_boolean.sort(key=itemgetter(0))
-    iterator = peekable(fresh_ranges_boolean)
-    index = -1
-    while True:
-        try:
-            j = next(iterator)
-        except StopIteration:
-            fresh_ranges_boolean.append(i)
-            break
-        else:
-            index += 1
-            if j[0] <= i[0] and i[1] <= j[1]:
-                break
-            elif i[0] <= j[0] and j[1] <= i[1]:
-                fresh_ranges_boolean[index] = i
-                break
-            elif i[0] > j[1] and i[1] < iterator.peek(i)[0]:
-                fresh_ranges_boolean.append(i)
-                break
-            elif i[0] <= j[1] and i[1] < iterator.peek(i)[0]:
-                fresh_ranges_boolean[index][1] = i[1]
-                break
-            elif (
-                i[0] <= j[1]
-                and iterator.peek(None) is not None
-                and i[1] >= iterator.peek()[0]
-            ):
-                peeked = fresh_ranges_boolean.pop(index + 1)
-                fresh_ranges_boolean[index][1] = peeked[1]
-                break
+    if last[1] < i[0]:
+        fresh_ranges_boolean.append(i)
+    elif last[1] < i[1]:
+        fresh_ranges_boolean[-1][1] = i[1]
 
 
 count = 0
 for i in fresh_ranges_boolean:
     # debug(f"{i[1]} - {i[0]} = {i[1] - i[0] + 1}")
     count += i[1] - i[0] + 1
-
 
 puzzle.submit_two(count)
