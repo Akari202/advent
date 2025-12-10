@@ -78,6 +78,7 @@ class Result(Enum):
     HIGH = 1
     LOW = 2
     COMPLETED = 3
+    WRONG = 4
 
     def to_function(self) -> Callable[[int, int], int]:
         if self == Result.HIGH:
@@ -191,7 +192,7 @@ class Aoc:
             response = input(
                 "Dev: Do you really want to request from the server? [Y/n]: "
             )
-            if response == "" or response.lower() != "Y":
+            if response == "" or response.lower() == "y":
                 return True
             else:
                 return False
@@ -239,6 +240,8 @@ class Aoc:
             return Result.LOW
         elif "That's not the right answer; your answer is too high" in content:
             return Result.HIGH
+        elif "That's not the right answer.  If you're stuck":
+            return Result.WRONG
         elif "You don't seem to be solving the right level." in content:
             error("Level already completed")
             return Result.COMPLETED
