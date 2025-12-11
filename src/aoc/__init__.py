@@ -182,10 +182,10 @@ class Aoc:
         return [list(i.strip()) for i in self.input.splitlines()]
 
     def submit_one(self, answer: int):
-        self.__submit(Part.ONE, answer)
+        self.__submit(Part.ONE, int(answer))
 
     def submit_two(self, answer: int):
-        self.__submit(Part.TWO, answer)
+        self.__submit(Part.TWO, int(answer))
 
     def __dev_server_check(self) -> bool:
         if DEV_MODE:

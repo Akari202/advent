@@ -1,4 +1,6 @@
-from typing import Optional
+import itertools
+from collections.abc import Generator, Iterable, Iterator
+from typing import Any, Optional
 
 import numpy as np
 
@@ -6,6 +8,29 @@ import numpy as np
 LETTERS = [x for x in "abcdefghijklmnopqrstuvwxyz"]
 VOWELS = {"a", "e", "i", "o", "u"}
 CONSONANTS = set(x for x in LETTERS if x not in VOWELS)
+
+
+class Node:
+    def __init__(self, value: str):
+        self.children: list[Node] = []
+        self.value: str = value
+
+    def __str__(self, level: int = 0) -> str:
+        out = f"{"⋮ " * level}{self.value}\n"
+        for child in self.children:
+            out += child.__str__(level + 1)
+        return out
+
+    def __iter__(self) -> Iterator[Node]:
+        return iter(self.children)
+
+    def depth_first(self) -> Generator[Node]:
+        yield self
+        for i in self:
+            yield from i.depth_first()
+
+    def is_leaf(self) -> bool:
+        return len(self.children) == 0
 
 
 def expand(
@@ -50,3 +75,11 @@ def get_polygon_centroid_area(points: list[list[int]]) -> tuple[tuple[int, int],
     Cx /= 6.0 * area
     Cy /= 6.0 * area
     return ((Cx, Cy), abs(area))
+
+
+def generate_combos(values: Iterable[Any], max: int = 10) -> Generator[tuple[Any]]:
+    depth = 0
+    while depth < max:
+        depth += 1
+        for i in itertools.product(values, repeat=depth):
+            yield i
