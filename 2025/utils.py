@@ -1,8 +1,10 @@
 import itertools
 from collections.abc import Generator, Iterable, Iterator
+from logging import error
 from typing import Any, Optional
 
 import numpy as np
+from numpy._typing import NDArray
 
 
 LETTERS = [x for x in "abcdefghijklmnopqrstuvwxyz"]
@@ -83,3 +85,24 @@ def generate_combos(values: Iterable[Any], max: int = 10) -> Generator[tuple[Any
         depth += 1
         for i in itertools.product(values, repeat=depth):
             yield i
+
+
+def print_bool_array(array: NDArray):
+    for i in array:
+        for j in i:
+            if j:
+                print("#", end="")
+            else:
+                print(".", end="")
+        print("")
+
+
+def parse_bool(value: str) -> bool:
+    match value:
+        case "#":
+            return True
+        case ".":
+            return False
+        case _:
+            error(f"Unexpected value parsed to bool: {value}")
+            return False
